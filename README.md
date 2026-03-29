@@ -1,9 +1,12 @@
 
 
-# 🐹 ppodong.dev> **"Work harder. Sunflower seeds don't grow on trees (Wait, they do, but they're expensive)."**
+# 🐹 ppodong.dev
+> **"Work harder. Sunflower seeds don't grow on trees (Wait, they do, but they're expensive)."**
 
 Welcome to the **ppodong.dev** core infrastructure. This repository handles the heavy-duty tunneling, high-speed logistics, and manual labor required to keep the **Frontera Estate** from collapsing into debt.
----## 📊 Labor Metrics & Statistics### **Resource Allocation (Current Quarter)**
+---
+## 📊 Labor Metrics & Statistics
+### **Resource Allocation (Current Quarter)**
 ```mermaid
 pie title Estate Resource Allocation
     "Sunflower Seeds" : 45
