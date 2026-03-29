@@ -1,0 +1,11 @@
+{
+  "builds": [
+    { "src": "invoice_app/wsgi.py", "use": "@vercel/python" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "invoice_app/wsgi.py" }
+  ],
+  "env": {
+    "DJANGO_SETTINGS_MODULE": "invoice_app.settings"
+  }
+}

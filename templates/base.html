@@ -1,0 +1,234 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}InvoiceSys{% endblock %}</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --sidebar-bg: #1e1e2f;
+            --sidebar-hover: #2c2c44;
+            --primary-accent: #4e73df;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: #f8f9fa;
+        }
+
+        body {
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* ================= SIDEBAR ================= */
+
+        .sidebar {
+            width: 250px;
+            background: var(--sidebar-bg);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            transition: 0.3s ease;
+        }
+
+        .sidebar h2 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .sidebar .nav-link {
+            color: #cfcfd9;
+            padding: 0.7rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            font-size: 0.95rem;
+            transition: 0.2s ease;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: var(--sidebar-hover);
+            color: #fff;
+        }
+
+        /* ================= MAIN CONTENT ================= */
+
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .topbar {
+            background: #fff;
+            padding: 0.8rem 1.2rem;
+            border-bottom: 1px solid #e3e6f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .page-title {
+            font-weight: 600;
+            font-size: 1.25rem;
+            margin: 0;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        /* ================= INVOICE PAPER ================= */
+
+        .invoice-paper {
+            background: #fff;
+            width: 100%;
+            max-width: 900px;
+            margin: auto;
+            padding: 30px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        /* ================= MOBILE ================= */
+
+        @media (max-width: 991px) {
+
+            body {
+                overflow: auto;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .mobile-toggle {
+                display: inline-block;
+            }
+        }
+
+        @media (min-width: 992px) {
+            .mobile-toggle {
+                display: none;
+            }
+        }
+
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- ============ DESKTOP SIDEBAR ============ -->
+<aside class="sidebar d-none d-lg-flex">
+    <h2>💼 InvoiceSys</h2>
+
+    <nav class="nav flex-column">
+        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+           href="{% url 'dashboard' %}">📑 Dashboard</a>
+
+        <a class="nav-link" href="{% url 'pos' 'new' %}">🖥️ POS</a>
+        <a class="nav-link" href="{% url 'inventory:list' %}">📦 Inventory</a>
+        <a class="nav-link" href="{% url 'customer:list' %}">👥 Customers</a>
+        <a class="nav-link" href="#">📊 Reports</a>
+        <a class="nav-link" href="#">⚙️ Settings</a>
+    </nav>
+
+    <div class="mt-auto">
+        <a href="{% url 'logout' %}" class="btn btn-outline-light w-100">Logout</a>
+    </div>
+</aside>
+
+
+<!-- ============ MOBILE SIDEBAR (OFFCANVAS) ============ -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="mobileSidebar">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title">InvoiceSys</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <nav class="nav flex-column">
+            <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
+            <a class="nav-link" href="{% url 'pos' 'new' %}">POS</a>
+            <a class="nav-link" href="{% url 'inventory:list' %}">Inventory</a>
+            <a class="nav-link" href="{% url 'customer:list' %}">Customers</a>
+        </nav>
+    </div>
+</div>
+
+
+<!-- ============ MAIN WRAPPER ============ -->
+<div class="main-wrapper">
+
+    <!-- Topbar -->
+    <header class="topbar">
+
+        <div class="d-flex align-items-center gap-3">
+            <!-- Mobile Menu Button -->
+            <button class="btn btn-outline-secondary mobile-toggle"
+                    data-bs-toggle="offcanvas"
+                    data-bs-target="#mobileSidebar">
+                ☰
+            </button>
+
+            <h3 class="page-title">
+                {% block page_title %}Dashboard{% endblock %}
+            </h3>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+            <input type="text"
+                   class="form-control form-control-sm d-none d-md-block"
+                   placeholder="Quick search..."
+                   style="width: 200px;">
+
+            <div class="dropdown">
+                <a href="#"
+                   class="d-flex align-items-center text-dark text-decoration-none dropdown-toggle"
+                   data-bs-toggle="dropdown">
+                    <img src="https://ui-avatars.com/api/?name={{ request.user.username|urlencode }}"
+                         class="rounded-circle me-2"
+                         width="36">
+                    <strong class="d-none d-md-inline">
+                        {{ request.user.username }}
+                    </strong>
+                </a>
+
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#">Profile</a></li>
+                    <li><a class="dropdown-item" href="#">Settings</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item text-danger"
+                           href="{% url 'logout' %}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+    </header>
+
+    <!-- Content -->
+    <main class="content">
+        {% block content %}{% endblock %}
+    </main>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

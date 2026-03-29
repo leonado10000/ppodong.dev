@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+{% block title %}POS — Create Invoice{% endblock %}
+{% block page_title %}Create Invoice{% endblock %}
+
+{% block content %}
+
+<!-- ================= HEADER DETAILS ================= -->
+<div class="card border-0 mb-4">
+  <div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+      <div>
+        <h5 class="fw-semibold mb-1">Invoice Details</h5>
+        <small class="text-muted">Fill required information before generating invoice</small>
+      </div>
+    </div>
+
+    <input type="hidden" id="invoice_pk" value="{{invoice_pk}}">
+
+    <div class="row g-3">
+      <div class="col-12 col-md-3">
+        <label class="form-label small text-muted">Invoice No</label>
+        <input type="text" class="form-control form-control-sm"
+               id="pos-invoice-number"
+               value="{{ invoice.number|default_if_none:'' }}">
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label small text-muted">Date</label>
+        <input type="date" class="form-control form-control-sm"
+               id="pos-invoice-date"
+               value="{{ invoice.date|date:'Y-m-d' }}">
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label class="form-label small text-muted">Buyer</label>
+        <select id="pos-buyer" class="form-select form-select-sm">
+          <option value="">Select Buyer</option>
+          {% for buyer in buyers %}
+            <option value="{{ buyer.name }}"
+              {% if invoice.customer == buyer %}selected{% endif %}>
+              {{ buyer.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2 d-flex align-items-end">
+        <a href="{% url 'customer:create' %}" class="btn btn-outline-primary btn-sm w-100">
+          + New Buyer
+        </a>
+      </div>
+
+      <!-- Optional Fields -->
+      <div class="col-12 col-md-4">
+        <label class="form-label small text-muted">Delivery Note</label>
+        <input type="text" class="form-control form-control-sm"
+               id="pos-delivery-note"
+               value="{{ invoice.notes|default_if_none:'' }}">
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label class="form-label small text-muted">Supplier Ref</label>
+        <input type="text" class="form-control form-control-sm"
+               id="pos-supplier-ref"
+               value="{{ invoice.supplier_ref|default_if_none:'' }}">
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label class="form-label small text-muted">Status</label>
+        <select id="pos-status" class="form-select form-select-sm">
+          {% for status in status_list %}
+            <option value="{{status.0}}"
+              {% if status.1 == invoice.status|lower %}selected{% endif %}>
+              {{status.1}}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ================= POS LAYOUT ================= -->
+<div class="row g-4">
+
+  <!-- LEFT: SEARCH -->
+  <div class="col-12 col-lg-7">
+    <div class="card border-0 h-100">
+      <div class="card-body">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="fw-semibold mb-0">Search Items</h6>
+          <small class="text-muted">By code or name</small>
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-8">
+            <input id="pos-search-input"
+                   class="form-control"
+                   type="text"
+                   placeholder="Type item name or code">
+          </div>
+          <div class="col-4">
+            <select id="pos-search-gst-filter" class="form-select">
+              <option value="">All GST</option>
+              <option value="12">12%</option>
+              <option value="16">16%</option>
+              <option value="18">18%</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="border rounded"
+             style="max-height: 55vh; overflow-y:auto;">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light sticky-top">
+              <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th class="text-end">GST%</th>
+                <th class="text-end">Rate</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="pos-results-tbody"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- RIGHT: CART -->
+  <div class="col-12 col-lg-5">
+    <div class="card border-0 h-100">
+      <div class="card-body p-0 d-flex flex-column">
+
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+          <h6 class="fw-semibold mb-0">Current Invoice</h6>
+          <span class="badge bg-secondary" id="pos-cart-count">0 items</span>
+        </div>
+
+        <div style="flex:1; overflow-y:auto;">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light sticky-top">
+              <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th class="text-end">Qty</th>
+                <th class="text-end">Amount</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="pos-cart-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Totals -->
+        <div class="border-top p-3 bg-light">
+          <div class="d-flex justify-content-between small">
+            <span>Subtotal</span>
+            <span id="pos-subtotal">₹ 0.00</span>
+          </div>
+          <div class="d-flex justify-content-between small">
+            <span>CGST</span>
+            <span id="pos-cgst">₹ 0.00</span>
+          </div>
+          <div class="d-flex justify-content-between small">
+            <span>SGST</span>
+            <span id="pos-sgst">₹ 0.00</span>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between fw-semibold">
+            <span>Total</span>
+            <span id="pos-grandtotal">₹ 0.00</span>
+          </div>
+        </div>
+
+        <div class="p-3 border-top d-flex gap-2">
+          <button class="btn btn-outline-danger w-100" id="pos-clear-cart">Clear</button>
+          <button class="btn btn-primary w-100" id="pos-generate-invoice">Generate</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+
+{{ data|json_script:"items" }}
+{{ cart|json_script:"cart" }}
+
+<script>
+/* Same logic — slightly refined */
+
+let cart = JSON.parse(document.getElementById("cart").textContent);
+let items = JSON.parse(document.getElementById("items").textContent);
+
+items.forEach(i => {
+  i.gst_rate = parseFloat(i.gst_rate);
+  i.rate_incl = parseFloat(i.rate_incl);
+});
+cart.forEach(i => {
+  i.gst_rate = parseFloat(i.gst_rate);
+  i.rate_incl = parseFloat(i.rate_incl);
+  i.qty = parseFloat(i.qty);
+});
+
+const el = id => document.getElementById(id);
+const fmt = n => "₹ " + (parseFloat(n || 0).toFixed(2));
+const toNum = x => isNaN(parseFloat(x)) ? 0 : parseFloat(x);
+
+/* Debounced search */
+let timer;
+el("pos-search-input").addEventListener("input", () => {
+  clearTimeout(timer);
+  timer = setTimeout(filterItems, 120);
+});
+el("pos-search-gst-filter").addEventListener("change", filterItems);
+
+function filterItems(){
+  const term = el("pos-search-input").value.toLowerCase();
+  const gst  = el("pos-search-gst-filter").value;
+
+  const filtered = items.filter(i =>
+    (i.name.toLowerCase().includes(term) || i.code.toLowerCase().includes(term)) &&
+    (!gst || String(i.gst_rate) === gst)
+  );
+
+  renderResults(filtered);
+}
+
+function renderResults(list){
+  const tbody = el("pos-results-tbody");
+  tbody.innerHTML = "";
+
+  if(!list.length){
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-muted">No items found</td></tr>`;
+    return;
+  }
+
+  list.forEach(i=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i.code}</td>
+      <td>${i.name}</td>
+      <td class="text-end">${i.gst_rate}%</td>
+      <td class="text-end">${i.rate_incl.toFixed(2)}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary">Add</button>
+      </td>`;
+    tr.querySelector("button").onclick = ()=> addToCart(i);
+    tbody.appendChild(tr);
+  });
+}
+
+function addToCart(item){
+  const idx = cart.findIndex(x=>x.code===item.code);
+  if(idx>-1){ cart[idx].qty += 1; }
+  else{
+    cart.push({...item, qty:1});
+  }
+  renderCart();
+}
+
+function renderCart(){
+  const tbody = el("pos-cart-tbody");
+  tbody.innerHTML="";
+  el("pos-cart-count").innerText = cart.length+" items";
+
+  cart.forEach(line=>{
+    const amount = toNum(line.rate_incl)*toNum(line.qty);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${line.code}</td>
+      <td>${line.name}</td>
+      <td class="text-end">
+        <input type="number" min="1" value="${line.qty}"
+         class="form-control form-control-sm text-end">
+      </td>
+      <td class="text-end">${amount.toFixed(2)}</td>
+      <td><button class="btn btn-sm btn-outline-danger">✖</button></td>
+    `;
+    tr.querySelector("input").onchange = e=>{
+      line.qty = toNum(e.target.value);
+      renderCart();
+    };
+    tr.querySelector("button").onclick = ()=>{
+      cart = cart.filter(x=>x.code!==line.code);
+      renderCart();
+    };
+    tbody.appendChild(tr);
+  });
+
+  computeTotals();
+}
+
+function computeTotals(){
+  let subtotal=0,cgst=0,sgst=0,total=0;
+
+  cart.forEach(l=>{
+    const P = toNum(l.rate_incl);
+    const g = toNum(l.gst_rate);
+    const q = toNum(l.qty);
+
+    const taxable = P/(1+(g/100));
+    const tax = P-taxable;
+
+    subtotal += taxable*q;
+    cgst += (tax/2)*q;
+    sgst += (tax/2)*q;
+    total += P*q;
+  });
+
+  el("pos-subtotal").innerText = fmt(subtotal);
+  el("pos-cgst").innerText = fmt(cgst);
+  el("pos-sgst").innerText = fmt(sgst);
+  el("pos-grandtotal").innerText = fmt(Math.floor(total));
+}
+
+el("pos-clear-cart").onclick = ()=>{
+  if(confirm("Clear cart?")){
+    cart=[];
+    renderCart();
+  }
+};
+el("pos-generate-invoice").onclick = async () => {
+
+  const invoiceData = {
+    invoice_pk: document.getElementById("invoice_pk").value,
+    invoice_number: document.getElementById("pos-invoice-number").value,
+    invoice_date: document.getElementById("pos-invoice-date").value,
+    buyer_name: document.getElementById("pos-buyer").value,
+    notes: document.getElementById("pos-delivery-note").value,
+    supplier_ref: document.getElementById("pos-supplier-ref").value,
+    status: document.getElementById("pos-status").value
+  };
+
+  const payload = {
+    items: cart,
+    totals: computeTotals(),
+    invoiceData: invoiceData
+  };
+
+  try {
+    const response = await fetch(`/invoices/edit/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error("Server error");
+    }
+
+    // Optional: const data = await response.json();
+
+    // ✅ Redirect only after success
+    window.location.href = "{% url 'dashboard' %}";
+
+  } catch (error) {
+    console.error("Error saving invoice:", error);
+    alert("Something went wrong while saving.");
+  }
+};
+
+renderCart();
+filterItems();
+</script>
+
+{% endblock %}
